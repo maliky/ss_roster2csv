@@ -110,7 +110,7 @@ def read_roster(text_file: str = "roster_250303.txt") -> List[List[str]]:
                         # Ignore the page break itself and any attached header text
                         continue
 
-                    page.append(line)
+                    page.append(line.strip(':'))  # we strip ':' from all and daytime
                 else:
                     ignored_lines += 1
 
