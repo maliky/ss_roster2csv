@@ -1,0 +1,3 @@
+Usage
+pyenv activate schedule
+python -m ss_roster2csv -i <input-file> -o <output-file>
