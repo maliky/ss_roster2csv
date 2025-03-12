@@ -1,9 +1,9 @@
 """
 ss_roster2csv/parser.py
 
-Contains the main functional parsing logic: 
+Contains the main functional parsing logic:
  - Splitting pages into 'courses'
- - Extracting (header, student) data 
+ - Extracting (header, student) data
  - Building the DataFrame
 """
 
@@ -61,7 +61,7 @@ def find_course_pages(pages: Pages) -> Courses:
                 logger.warning(f"Page {idx} lacks 'Email', possible corruption: {page}")
             else:
                 sidx = page.index("Email")
-                page = page[sidx + 1:]
+                page = page[sidx + 1 :]
                 empty_page = len(page) == 0
 
         course.append(page)
@@ -85,7 +85,11 @@ def make_one(course: Courses) -> Course:
         Course: A single merged list of lines.
     """
     assert len(course) in [0, 1, 2], f"Unexpected page count: {len(course)}"
-    return course[0] + course[1] if len(course) == 2 else course[0] if len(course) == 1 else []
+    return (
+        course[0] + course[1]
+        if len(course) == 2
+        else course[0] if len(course) == 1 else []
+    )
 
 
 def get_courses_info(courses: Courses) -> CoursesInfo:
@@ -107,9 +111,12 @@ def get_courses_info(courses: Courses) -> CoursesInfo:
             continue
 
         header, body = split_head_body(course)
+        hdr_dict = parse_header_keys(header)
         students = get_lonely_students(body) if len(body) < 5 else get_students(body)
-        result.append((header, students))
-        logger.info(f"Parsed course {i}: {len(students)} students extracted.")
+        result.append((hdr_dict, students))
+        logger.info(
+            f"Parsed course {i, hdr_dict['Course']}: {len(students)} students extracted."
+        )
 
     return result
 
@@ -141,7 +148,7 @@ def split_head_body(course: Course) -> Tuple[HeaderInfo, BodyInfo]:
     except ValueError:
         stud_eidx = len(course)
 
-    return course[:head_eidx], course[stud_sidx + 1:stud_eidx]
+    return course[:head_eidx], course[stud_sidx + 1 : stud_eidx]
 
 
 def get_lonely_students(body: BodyInfo) -> Students:
@@ -195,7 +202,9 @@ def get_students(body: BodyInfo) -> Students:
         cur_lineno = is_number(lineno)
 
         if students and cur_lineno != last_lineno + 1:
-            logger.warning(f"Line numbers out of order: expected {last_lineno + 1}, got {cur_lineno}")
+            logger.warning(
+                f"Line numbers out of order: expected {last_lineno + 1}, got {cur_lineno}"
+            )
 
         last_lineno = cur_lineno
         students.append((lineno, tu_id, stud_name))
@@ -217,7 +226,7 @@ def build_long_table(crs: CrsData) -> pd.DataFrame:
     rows = []
 
     for i, (header, students) in enumerate(crs):
-        hdr_dict = parse_header_keys(header)
+        hdr_dict = header
         hdr_dict["crsid"] = i
 
         for student in students:
@@ -225,10 +234,21 @@ def build_long_table(crs: CrsData) -> pd.DataFrame:
                 logger.warning(f"Malformed student entry: {student}")
                 continue
 
-            row = {**hdr_dict, "LineNo": student[0], "StudentID": student[1], "FullName": student[2]}
+            row = {
+                **hdr_dict,
+                "LineNo": student[0],
+                "StudentID": student[1],
+                "FullName": student[2],
+            }
             rows.append(row)
 
-    return pd.DataFrame(rows)
+    rs = pd.DataFrame(rows)
+
+    # splitint the Day/Time in 2 based on space
+    rs = pd.concat(
+        [rs, rs["Day/Time"].str.extract("(?P<Day>^[^ ]*) (?P<Time>.*)")], axis=1
+    ).drop(columns="Day/Time")
+    return rs
 
 
 def parse_header_keys(tokens: HeaderInfo) -> CrsHeader:
@@ -248,19 +268,23 @@ def parse_header_keys(tokens: HeaderInfo) -> CrsHeader:
         key = tokens[i]
         if key in COURSE_HEADER_KEYS and key not in used_keys:
             used_keys.add(key)
-            value = tokens[i + 1] if i + 1 < len(tokens) and tokens[i + 1] not in COURSE_HEADER_KEYS else ""
+            value = (
+                tokens[i + 1]
+                if i + 1 < len(tokens) and tokens[i + 1] not in COURSE_HEADER_KEYS
+                else ""
+            )
             # We want to do a special treatment for Day/Time key because some courses with only
             # one student get the values mixed up during convertion from the pdf
             # and the studnet line number '1' get inserted just before the Date time (when it existe)
             # in that case I want to remove the 1 and use the next value if it exist.
             # so the next line override value in that case
-            if key == "Day/Time" and value=='1':
-                if i+2 == len(token):
+            if key == "Day/Time" and value == "1":
+                if i + 2 == len(tokens):
                     # nothing after the 1, the date is the last token to take from the list
                     value = ""
                 else:
-                    value = tokens[i+2]
-                
+                    value = tokens[i + 2]
+
             result[key] = value.strip(": ")
 
     return result
@@ -280,4 +304,3 @@ def is_number(value: str) -> Any:
         return int(value)
     except ValueError:
         return None
-
