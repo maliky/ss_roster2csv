@@ -35,7 +35,7 @@ COURSE_HEADER_KEYS = [
     "Course Title",
     "Instructor",
     "Section",
-    "Day/Time:",
+    "Day/Time",
 ]
 STUD_HEADER = ["StudentID", "Full Name", "Cell #", "Email"]
 
@@ -249,6 +249,18 @@ def parse_header_keys(tokens: HeaderInfo) -> CrsHeader:
         if key in COURSE_HEADER_KEYS and key not in used_keys:
             used_keys.add(key)
             value = tokens[i + 1] if i + 1 < len(tokens) and tokens[i + 1] not in COURSE_HEADER_KEYS else ""
+            # We want to do a special treatment for Day/Time key because some courses with only
+            # one student get the values mixed up during convertion from the pdf
+            # and the studnet line number '1' get inserted just before the Date time (when it existe)
+            # in that case I want to remove the 1 and use the next value if it exist.
+            # so the next line override value in that case
+            if key == "Day/Time" and value=='1':
+                if i+2 == len(token):
+                    # nothing after the 1, the date is the last token to take from the list
+                    value = ""
+                else:
+                    value = tokens[i+2]
+                
             result[key] = value.strip(": ")
 
     return result
