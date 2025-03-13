@@ -25,7 +25,7 @@ except ImportError:
 # Utility: Check missing line numbers
 ########################
 def check_missing_lines(
-    df: pd.DataFrame, course_id_col: str = "crsid"
+    df: pd.DataFrame, course_id_col: str = "crsno"
 ) -> pd.DataFrame:
     """
     Detects missing student line numbers in each course.

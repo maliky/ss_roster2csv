@@ -227,7 +227,7 @@ def build_long_table(crs: CrsData) -> pd.DataFrame:
 
     for i, (header, students) in enumerate(crs):
         hdr_dict = header
-        hdr_dict["crsid"] = i
+        hdr_dict["crsno"] = i
 
         for student in students:
             if len(student) != 3:
@@ -246,8 +246,29 @@ def build_long_table(crs: CrsData) -> pd.DataFrame:
 
     # splitint the Day/Time in 2 based on space
     rs = pd.concat(
-        [rs, rs["Day/Time"].str.extract("(?P<Day>^[^ ]*) (?P<Time>.*)")], axis=1
+        [rs, rs["Day/Time"].str.extract("(?P<days>^[^ ]*) (?P<time>.*)")], axis=1
     ).drop(columns="Day/Time")
+
+    # splitting Course in Course code and Couse no
+    rs = pd.concat(
+        [rs, rs["Course"].str.extract("(?P<course_code>^[^ ]*) (?P<course_no>.*)")],
+        axis=1,
+    )
+    # add a course id != course no
+    rs.loc[:, 'crsid'] = rs.Course.str.replace(' ', '_')
+    rs = rs.drop(columns='Course')
+    
+    rs = rs.rename(
+        columns={
+            "Course Title": "course_title",
+            "Instructor": "instructor",
+            "Section": "section",
+            "LineNo": "lineno",
+            "StudentID": "studid",
+            "FullName": "fullname",
+        }
+    )
+
     return rs
 
 
