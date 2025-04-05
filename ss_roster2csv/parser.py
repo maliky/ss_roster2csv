@@ -255,9 +255,11 @@ def build_long_table(crs: CrsData) -> pd.DataFrame:
         axis=1,
     )
     # add a course id != course no
-    rs.loc[:, 'crsid'] = rs.Course.str.replace(' ', '_')
-    rs = rs.drop(columns='Course')
-    
+    rs.loc[:, "crsid"] = (
+        rs.Course.str.replace(" ", "_") + "-s" + rs.Section.apply(lambda x: f"{x:0>2}")
+    )
+    rs = rs.drop(columns="Course")
+
     rs = rs.rename(
         columns={
             "Course Title": "course_title",

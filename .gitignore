@@ -1,6 +1,9 @@
-*__pycache__*
-*build*
-*dist*
-*ss_roster2csv.egg-info*
+build*
+dist*
+*.egg-info
 *~
-*#*
+#*
+__py*
+.*
+*xlsx
+processed/*
